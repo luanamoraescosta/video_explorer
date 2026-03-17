@@ -1,15 +1,23 @@
 """
 Page 1 -- Frame Extraction
+Works both locally (path input) and on Streamlit Cloud (file uploader).
+Uploaded files are written to a temp file so OpenCV and PySceneDetect
+can open them by path; the temp file persists for the session.
 """
 
 import sys
 import io
+import os
+import hashlib
+import tempfile
 import zipfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import streamlit as st
-from core.ui_helpers import init_session, apply_global_css, frame_grid, fmt_ts, b64_to_pil
+from core.ui_helpers import (
+    init_session, apply_global_css, frame_grid, b64_to_pil,
+)
 from core.extraction import extract_scenes, extract_interval, video_info
 from core import cache
 
@@ -19,29 +27,74 @@ apply_global_css()
 
 st.title("Frame Extraction")
 
-# -- video selection ----------------------------------------------------------
-st.subheader("1. Select video")
+# ── video input ────────────────────────────────────────────────────────────────
+st.subheader("1. Video source")
 
-video_path_input = st.text_input(
-    "Absolute path to video file",
-    value=st.session_state.video_path or "",
-    placeholder="/home/user/videos/my_video.mp4",
+input_mode = st.radio(
+    "Input mode",
+    ["Upload file", "Local path"],
+    horizontal=True,
+    help="Use 'Upload file' on Streamlit Cloud. Use 'Local path' when running locally.",
 )
 
-if video_path_input and Path(video_path_input).exists():
-    st.session_state.video_path = video_path_input
-    info = video_info(video_path_input)
+video_path = None
+
+if input_mode == "Upload file":
+    uploaded = st.file_uploader(
+        "Upload a video file",
+        type=["mp4", "avi", "mov", "mkv", "webm", "m4v"],
+        help="Large files (> 200 MB) require the maxUploadSize setting in .streamlit/config.toml.",
+    )
+
+    if uploaded is not None:
+        # Compute a short hash of the filename + size to detect re-uploads.
+        file_id = hashlib.md5(
+            f"{uploaded.name}_{uploaded.size}".encode()
+        ).hexdigest()[:12]
+
+        # Write to a stable temp path so we don't re-write on every rerun.
+        tmp_dir  = Path(tempfile.gettempdir()) / "clip_explorer_uploads"
+        tmp_dir.mkdir(exist_ok=True)
+        suffix   = Path(uploaded.name).suffix
+        tmp_path = tmp_dir / f"{file_id}{suffix}"
+
+        if not tmp_path.exists():
+            with st.spinner(f"Saving '{uploaded.name}' to temp storage..."):
+                with open(tmp_path, "wb") as f:
+                    f.write(uploaded.read())
+            st.success(f"Saved to temp: {tmp_path.name}")
+        else:
+            st.info(f"Using cached temp file for '{uploaded.name}'.")
+
+        video_path = str(tmp_path)
+        st.session_state.video_path = video_path
+        st.caption(f"Temp path: `{video_path}`")
+
+else:
+    path_input = st.text_input(
+        "Absolute path to video file",
+        value=st.session_state.video_path or "",
+        placeholder="/home/user/videos/my_video.mp4",
+    )
+    if path_input:
+        if Path(path_input).exists():
+            video_path = path_input
+            st.session_state.video_path = video_path
+        else:
+            st.error("File not found.")
+
+# ── video info ────────────────────────────────────────────────────────────────
+if video_path and Path(video_path).exists():
+    info = video_info(video_path)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Duration",     f"{info['duration']:.1f}s")
     c2.metric("FPS",          f"{info['fps']:.1f}")
     c3.metric("Resolution",   f"{info['width']}x{info['height']}")
     c4.metric("Total frames", info["total_frames"])
-elif video_path_input:
-    st.error("File not found.")
 
 st.divider()
 
-# -- extraction mode ----------------------------------------------------------
+# ── extraction mode ────────────────────────────────────────────────────────────
 st.subheader("2. Extraction mode")
 
 mode = st.radio(
@@ -84,19 +137,18 @@ thumb_w, thumb_h = [int(x) for x in thumb_size_label.split("x")]
 
 st.divider()
 
-# -- cache status -------------------------------------------------------------
-video_path = st.session_state.video_path
-has_cache  = bool(video_path and cache.frames_cache_exists(video_path, mode, param))
+# ── cache status ───────────────────────────────────────────────────────────────
+has_cache = bool(video_path and cache.frames_cache_exists(video_path, mode, param))
 
 if has_cache:
-    st.success(f"Cache found for mode={mode}, param={param}. "
-               "You can load directly or re-extract.")
+    st.success(f"Cache found for mode={mode}, param={param}. Load directly or re-extract.")
 
 col_run, col_load = st.columns(2)
-run_extract    = col_run.button("Run extraction", type="primary", disabled=not video_path)
+run_extract    = col_run.button("Run extraction", type="primary",
+                                 disabled=not video_path)
 load_cache_btn = col_load.button("Load from cache", disabled=not has_cache)
 
-# -- execution ----------------------------------------------------------------
+# ── execution ──────────────────────────────────────────────────────────────────
 if load_cache_btn and has_cache:
     result = cache.load_frames(video_path, mode, param)
     if result:
@@ -147,7 +199,7 @@ if run_extract and video_path:
                                   "n_frames": len(timestamps)})
     st.success(f"{len(timestamps)} frames extracted.")
 
-# -- preview + download -------------------------------------------------------
+# ── preview + download ─────────────────────────────────────────────────────────
 if st.session_state.frames_b64:
     st.divider()
     n = len(st.session_state.frames_b64)
@@ -157,13 +209,13 @@ if st.session_state.frames_b64:
     with col_sliders:
         n_cols   = st.slider("Columns", 2, 8, 4, key="prev_cols")
         max_show = st.slider("Show up to", 8, min(200, n), min(24, n), step=8)
+
     with col_download:
         st.markdown("**Download frames as ZIP**")
         zip_format = st.radio("Format", ["JPEG", "PNG"], horizontal=True, key="zip_fmt")
 
-        # Build ZIP on-demand when the button is clicked
         if st.button("Build ZIP", key="build_zip"):
-            buf = io.BytesIO()
+            buf  = io.BytesIO()
             stem = Path(st.session_state.video_path).stem if st.session_state.video_path else "frames"
             ext  = zip_format.lower()
 
@@ -173,24 +225,26 @@ if st.session_state.frames_b64:
                     st.session_state.timestamps,
                     st.session_state.scene_ids or range(n),
                 )):
-                    pil     = b64_to_pil(b64)
-                    m, s    = divmod(int(ts), 60)
-                    ts_str  = f"{m:02d}m{s:02d}s"
-                    fname   = f"{stem}_scene{sc:04d}_t{ts_str}_f{i:04d}.{ext}"
-                    img_buf = io.BytesIO()
+                    pil    = b64_to_pil(b64)
+                    m, s   = divmod(int(ts), 60)
+                    ts_str = f"{m:02d}m{s:02d}s"
+                    fname  = f"{stem}_scene{sc:04d}_t{ts_str}_f{i:04d}.{ext}"
+                    ibuf   = io.BytesIO()
                     if zip_format == "JPEG":
-                        pil.convert("RGB").save(img_buf, format="JPEG", quality=90)
+                        pil.convert("RGB").save(ibuf, format="JPEG", quality=90)
                     else:
-                        pil.save(img_buf, format="PNG")
-                    zf.writestr(fname, img_buf.getvalue())
+                        pil.save(ibuf, format="PNG")
+                    zf.writestr(fname, ibuf.getvalue())
 
             buf.seek(0)
             st.session_state["_zip_bytes"] = buf.getvalue()
-            st.session_state["_zip_name"]  = f"{stem}_frames_{mode}_{param}.zip"
+            st.session_state["_zip_name"]  = (
+                f"{stem}_frames_{mode}_{param}.zip"
+            )
 
         if "_zip_bytes" in st.session_state:
             st.download_button(
-                label=f"Download  ({len(st.session_state.frames_b64)} frames)",
+                label=f"Download  ({n} frames)",
                 data=st.session_state["_zip_bytes"],
                 file_name=st.session_state["_zip_name"],
                 mime="application/zip",
@@ -208,7 +262,8 @@ if st.session_state.frames_b64:
     st.divider()
     col_next, col_clear = st.columns(2)
     with col_next:
-        if st.button("Next: Generate Embeddings", type="primary", use_container_width=True):
+        if st.button("Next: Generate Embeddings", type="primary",
+                     use_container_width=True):
             st.switch_page("pages/2_Embeddings.py")
     with col_clear:
         if st.button("Delete and restart", use_container_width=True):
