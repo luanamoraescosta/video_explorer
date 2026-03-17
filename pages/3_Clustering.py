@@ -212,3 +212,15 @@ elif selected == "Noise":
 else:
     c = int(selected.replace("Cluster ", ""))
     cluster_section(c, n_exemplars)
+
+
+st.divider()
+col_next, col_clear = st.columns(2)
+with col_next:
+    if st.button("Next: Semantic Search", type="primary", use_container_width=True):
+            st.switch_page("pages/4_Semantic_Search.py")
+with col_clear:
+    if st.button("Delete and restart", use_container_width=True):
+            from core.ui_helpers import clear_session
+            clear_session()
+            st.switch_page("1_Extract_Frames.py")

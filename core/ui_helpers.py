@@ -1,36 +1,25 @@
-"""
-Helpers de UI compartilhados entre as páginas.
-"""
-
 import base64
 import io
 import streamlit as st
 from PIL import Image
 import numpy as np
 
-
 # ── estilo global ─────────────────────────────────────────────
-
 DARK_CSS = """
 <style>
-[data-testid="stSidebar"] { background: #1a1d27; }
-.stApp { background: #0f1117; }
 div[data-testid="stMetricValue"] { font-size: 1.6rem; font-weight: 700; }
 .frame-caption { font-size: .7rem; color: #8b90b8; text-align: center; margin-top: 2px; }
 </style>
 """
 
-
 def apply_global_css():
     st.markdown(DARK_CSS, unsafe_allow_html=True)
 
-
 # ── estado de sessão ─────────────────────────────────────────
-
 DEFAULTS = {
     "video_path":   None,
     "mode":         "scene",
-    "param":        27.0,        # threshold (scene) ou interval_sec (interval)
+    "param":        27.0,
     "embeddings":   None,
     "timestamps":   None,
     "frames_b64":   None,
@@ -43,11 +32,15 @@ DEFAULTS = {
     "clip_device":  None,
 }
 
-
 def init_session():
     for k, v in DEFAULTS.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+def clear_session():
+    """Limpa todos os dados da sessão para recomeçar do zero."""
+    for k, v in DEFAULTS.items():
+        st.session_state[k] = v
 
 
 def session_has_frames() -> bool:

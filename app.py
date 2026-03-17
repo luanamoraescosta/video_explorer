@@ -38,3 +38,6 @@ Analyse videos with CLIP embeddings, semantic clustering, and natural language s
 Use the sidebar to navigate between pages.
 Start with **Frame Extraction**.
 """)
+st.divider()
+if st.button("Iniciar Extração de Frames", type="primary"):
+    st.switch_page("pages/1_Extract_Frames.py")

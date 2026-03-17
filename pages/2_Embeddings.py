@@ -20,7 +20,9 @@ st.title("CLIP Embeddings")
 st.caption("Generates CLIP feature vectors for each extracted frame. "
            "Results are cached so subsequent clustering runs skip this step.")
 
-require_frames()
+if st.session_state.frames_b64 is None:
+    st.warning("No frames available. Please go back to the **Extraction** page and run the extraction first.")
+    st.stop()
 
 video_path = st.session_state.video_path
 mode       = st.session_state.mode
@@ -140,4 +142,13 @@ if st.session_state.embeddings is not None:
                              template="plotly_dark")
         st.plotly_chart(fig, use_container_width=True)
 
-    st.caption("Next step: Clustering")
+    st.divider()
+    col_next, col_clear = st.columns(2)
+    with col_next:
+        if st.button("Next Clustering", type="primary", use_container_width=True):
+            st.switch_page("pages/3_Clustering.py")
+    with col_clear:
+        if st.button("Delete and restart", use_container_width=True):
+            from core.ui_helpers import clear_session
+            clear_session()
+            st.switch_page("1_Extract_Frames.py") # Volta para o início

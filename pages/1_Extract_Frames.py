@@ -158,4 +158,15 @@ if st.session_state.frames_b64:
         n_cols=n_cols,
         max_show=max_show,
     )
-    st.caption("Next step: Embeddings")
+    st.divider()
+    col_next, col_clear = st.columns(2)
+    
+    with col_next:
+        if st.button("Next: Generate Embeddings", type="primary", use_container_width=True):
+            st.switch_page("pages/2_Embeddings.py")
+            
+    with col_clear:
+        if st.button("Delete and restart", use_container_width=True):
+            from core.ui_helpers import clear_session
+            clear_session()
+            st.rerun()
