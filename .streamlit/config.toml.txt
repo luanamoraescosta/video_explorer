@@ -1,4 +1,14 @@
+[server]
+# Allow uploads up to 2 GB.
+# Streamlit Cloud free tier hard-caps at 1 GB; paid tiers allow more.
+# Lower this if you hit memory limits on your plan.
+maxUploadSize = 2048
+enableCORS = false
+enableXsrfProtection = true
+
 [theme]
-base="dark"
-backgroundColor="#0f1117"
-secondaryBackgroundColor="#1a1d27"
+base = "dark"
+backgroundColor = "#0f1117"
+secondaryBackgroundColor = "#1a1d27"
+primaryColor = "#7c6ff7"
+textColor = "#e0e0e0"
