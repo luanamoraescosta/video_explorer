@@ -1,5 +1,6 @@
 streamlit>=1.35
 opencv-python-headless>=4.9
+scenedetect>=0.6.3
 torch>=2.2
 torchvision>=0.17
 transformers>=4.40
@@ -10,4 +11,3 @@ Pillow>=10.0
 numpy>=1.26
 matplotlib>=3.8
 plotly>=5.20
-scenedetect[opencv]>=0.6.3
