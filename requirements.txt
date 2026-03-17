@@ -1,0 +1,13 @@
+streamlit>=1.35
+opencv-python-headless
+torch
+torchvision
+transformers
+hdbscan
+umap-learn
+scikit-learn
+Pillow
+numpy
+matplotlib
+plotly
+scenedetect[opencv]
