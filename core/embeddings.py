@@ -56,17 +56,19 @@ def compute_image_embeddings(
 
 # ── embedding de texto ────────────────────────────────────────
 
-def compute_text_embedding(
-    text: str,
-    model, processor, device,
-) -> np.ndarray:
-    """Retorna vetor L2-normalizado (shape: [D])."""
+def compute_text_embedding(text, model, processor, device):
     inputs = processor(text=[text], return_tensors="pt", padding=True).to(device)
     with torch.no_grad():
         feats = model.get_text_features(**inputs)
-        feats = feats / feats.norm(dim=-1, keepdim=True)
-    return feats.cpu().numpy()[0]
+        
+        if hasattr(feats, "pooler_output"):
+            feats = feats.pooler_output
+        elif isinstance(feats, (list, tuple)):
+            feats = feats[0]
+        # ---------------------------------------------------------------------
 
+        feats = feats / feats.norm(dim=-1, keepdim=True)
+    return feats.cpu().numpy()
 
 # ── similaridade ─────────────────────────────────────────────
 
