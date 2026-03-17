@@ -39,6 +39,13 @@ def compute_image_embeddings(
         inputs = processor(images=batch, return_tensors="pt", padding=True).to(device)
         with torch.no_grad():
             feats = model.get_image_features(**inputs)
+            
+            # Adiciona compatibilidade para o transformers v5+
+            if hasattr(feats, "pooler_output"):
+                feats = feats.pooler_output
+            elif isinstance(feats, tuple):
+                feats = feats[0]
+                
             feats = feats / feats.norm(dim=-1, keepdim=True)
         all_emb.append(feats.cpu().numpy())
         if progress_cb:
