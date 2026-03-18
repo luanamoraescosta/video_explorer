@@ -28,7 +28,7 @@ Analyse videos with CLIP embeddings, semantic clustering, and natural language s
 
 | Step | Page | Description |
 |------|------|-------------|
-| 1 | **Frame Extraction** | Scene detection via PySceneDetect or fixed-interval sampling. Saves frames to cache. |
+| 1 | **Load Frames** | Load Frames from Zip file or local folder. Saves frames to cache. |
 | 2 | **Embeddings** | Computes CLIP feature vectors for each frame. Reuses cache on subsequent runs. |
 | 3 | **Clustering** | UMAP dimensionality reduction followed by HDBSCAN. Visualises scatter and cluster exemplars. |
 | 4 | **Semantic Search** | Ranks frames by cosine similarity with a free-text CLIP query. |
@@ -36,8 +36,8 @@ Analyse videos with CLIP embeddings, semantic clustering, and natural language s
 
 ---
 Use the sidebar to navigate between pages.
-Start with **Frame Extraction**.
+Start with **Load Frames**.
 """)
 st.divider()
-if st.button("Iniciar Extração de Frames", type="primary"):
+if st.button("Start Loading Frames", type="primary"):
     st.switch_page("pages/1_Extract_Frames.py")
