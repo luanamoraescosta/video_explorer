@@ -1,7 +1,5 @@
 # video_explorer
 
-> 🚧 Work in progress.
-
 A Streamlit app for exploring and clustering video content using deep learning embeddings.
 
 ## What is this?
